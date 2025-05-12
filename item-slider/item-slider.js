@@ -321,7 +321,7 @@
     };
 
     self.loadItems =  () => {
-        fetch("../smart-recommender/data.json")
+        fetch("../iife-javascript/item-slider/data.json")
         .then(response => response.json())
         .then(data => {
             items = data.items

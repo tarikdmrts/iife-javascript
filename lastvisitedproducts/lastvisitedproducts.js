@@ -21,20 +21,10 @@
     });
 
     self.init = () => {
-        self.collectInitialData();
         self.reset();
         self.buildCSS();
         self.buildHTML();
         self.setEvents();
-    };
-
-    self.state = {
-        visitedProducts: [],
-        productId: null,
-        productImgUrl: null,
-        productName: null,
-        productPrice: null,
-        productUrl: null,
     };
 
     self.reset = () => {
@@ -101,7 +91,8 @@
     };
 
     self.buildHTML = () => {
-        const { visitedProducts, productId } = self.state;
+        const visitedProducts =  JSON.parse(localStorage.getItem('visitedProducts')) || [];
+        const productId = $('.product-detail').attr('modelid');
         const filteredProducts = visitedProducts.filter((product) => product.id !== productId);
 
         if (filteredProducts.length > 0 && $('.product-detail').length > 0) {
@@ -135,16 +126,16 @@
 
     self.setEvents = () => {
         if (self.isOnProductPage()) {
-            const { productId, productName, productImgUrl, visitedProducts, productUrl, productPrice } = self.state;
-
+            const visitedProducts =  JSON.parse(localStorage.getItem('visitedProducts')) || [];
+            const productId = $('.product-detail').attr('modelid');
             const isProductExists = visitedProducts.some(product => product.id == productId);
             if (!isProductExists) {
                 const newProduct = {
-                    id: productId,
-                    name: productName,
-                    imgUrl: productImgUrl,
-                    productUrl: productUrl,
-                    productPrice: productPrice,
+                    id: $('.product-detail').attr('modelid'),
+                    name: $('.breadcrumb-item:last').text(),
+                    imgUrl: $('.product-large-image:first').attr('src'),
+                    productUrl: window.location.href,
+                    productPrice: $('.current-price').text().trim() || $('.price-in-cart').text().trim(),
                 };
                 visitedProducts.push(newProduct);
                 localStorage.setItem('visitedProducts', JSON.stringify(visitedProducts));
@@ -153,15 +144,6 @@
     };
 
     self.isOnProductPage = () => $('.product-detail').length > 0;
-
-    self.collectInitialData = () => {
-        self.state.visitedProducts = JSON.parse(localStorage.getItem('visitedProducts')) || [];
-        self.state.productId = $('.product-detail').attr('modelid');
-        self.state.productImgUrl = $('.product-large-image:first').attr('src');
-        self.state.productName = $('.breadcrumb-item:last').text();
-        self.state.productPrice = $('.current-price').text().trim() || $('.price-in-cart').text().trim();
-        self.state.productUrl = window.location.href;
-    };
 
     self.init();
 })({});
