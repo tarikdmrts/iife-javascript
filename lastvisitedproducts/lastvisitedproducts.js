@@ -12,6 +12,9 @@
         title: 'visited-products-title',
         productUrl: 'custom-product-url',
         productPrice: 'custom-product-price',
+        nextArrow: 'next-arrow-element',
+        prevArrow: 'prev-arrow-element',
+        contentWrapper:'last-visited-products',
     };
 
     const selectors = Object.keys(classes).reduce((createdSelector, key) => (
@@ -33,19 +36,24 @@
     };
 
     self.buildCSS = () => {
-        const { wrapper, container, image, name, list, content, title, productUrl, productPrice } = selectors;
+        const { wrapper, container, image, name, list, content, title, productUrl,
+             productPrice, nextArrow, prevArrow,contentWrapper } = selectors;
 
         const customStyle = `
         ${ wrapper } {
             display: flex;
+            justify-content:center;
             box-shadow: 80px 80px 80px 80px rgba(198, 206, 215, .3);
             background-color: #fff;
             margin: 10px 0px;
             padding: 10px 10px 0px 10px;
         }
         ${ container } {
+            display: flex;
             width: 120px;
-            text-align:left;
+            align-items: center;
+            justify-content: center;
+            text-align: left;
         }
         ${ image } {
             width: 100px;
@@ -55,8 +63,8 @@
             display: flex;
             list-style: none;
             padding: 10px 10px 10px 0px;
-            overflow-x: hidden;
-            flex-wrap:wrap;
+            max-width:370px;
+            transition: transform 0.3s ease;
         }
         ${ name } {
             display: -webkit-box;
@@ -69,6 +77,7 @@
         }
         ${ content } {
             margin-top: 10px;
+            overflow-x: hidden;
         }
         ${ title } {
             font-size: 20px;
@@ -85,6 +94,63 @@
             font-size:16px;
             font-weight:bold;
         }
+
+        ${ prevArrow } {
+            position:absolute;
+            left:-14px;
+            top:100px;
+            font-size:30px;
+            text-decoration:none !important;
+        }
+        ${ nextArrow } {
+            position:absolute;
+            right:-5px;
+            top:100px;
+            font-size:30px;
+            text-decoration:none !important;
+        }
+
+        ${ contentWrapper }{
+            position:relative;
+        }
+
+        @media screen and (min-width:1650px){
+            ${ list } {
+                max-width:610px;
+            }
+            ${ prevArrow } {
+                left:0px;
+            }
+            ${ nextArrow } {
+                right:5px;
+            }
+            ${ title }{
+                margin-left:20px;
+            }
+        }
+        @media screen and (min-width:769px) and (max-width:999px){
+            ${ list } {
+                max-width:610px;
+            }
+        }
+        @media screen and (max-width:768px){
+            ${ image }{
+                width:90px;
+            }
+            ${ list } {
+                max-width:300px;
+            }
+            ${ container }{
+                max-width:100px;
+            }
+
+            ${ prevArrow } {
+                left:-20px;
+            }
+            ${ nextArrow } {
+                right:-10px;
+            }
+        }
         `;
 
         $(`<style>`).addClass(classes.style).html(customStyle).appendTo('head');
@@ -95,7 +161,7 @@
         const productId = $('.product-detail').attr('modelid');
         const filteredProducts = visitedProducts.filter((product) => product.id !== productId);
 
-        if (filteredProducts.length > 0 && $('.product-detail').length > 0) {
+        if (filteredProducts.length > 0 && self.isOnProductPage()) {
             const productsHTML = filteredProducts.map((product) => `
                 <li>
                     <div class="${ classes.container }">
@@ -110,13 +176,16 @@
 
             const outerHtml = `
                 <div class="${ classes.wrapper }">
-                    <div class="last-visited-products">
+                    <div class="${ classes.contentWrapper }">
                         <h2 class="${ classes.title }">Son Gezilen Ürünler</h2>
                         <div class="${ classes.content }">
                             <ul class="${ classes.list }">
                                 ${ productsHTML }
                             </ul>
+
                         </div>
+                        <a href ="#" class="${ classes.prevArrow }">&#8249;</a>
+                        <a href ="#" class="${ classes.nextArrow }">&#8250;</a>
                     </div>
                 </div>`;
 
@@ -125,6 +194,18 @@
     };
 
     self.setEvents = () => {
+        const getShowedItemCount = () =>{
+            const width = window.innerWidth;
+            let itemCount;
+
+             if (width >= 1440 || width <= 1000) {
+                itemCount = 5;
+            } else {
+                itemCount = 3;
+            }
+            return itemCount;     
+        }
+        
         if (self.isOnProductPage()) {
             const visitedProducts =  JSON.parse(localStorage.getItem('visitedProducts')) || [];
             const productId = $('.product-detail').attr('modelid');
@@ -140,6 +221,31 @@
                 visitedProducts.push(newProduct);
                 localStorage.setItem('visitedProducts', JSON.stringify(visitedProducts));
             }
+
+            const prevArrow = $( selectors.prevArrow )
+            const nextArrow = $( selectors.nextArrow )
+            const carousel = document.querySelector(`${ selectors.list }`)
+            const productCount = $(`${ selectors.list } li`).length;
+            const scrollAmount = document.querySelector(`${ selectors.content } li`).offsetWidth
+            let currentOffset = 0;
+    
+            prevArrow.on('click', (event) => {
+                event.preventDefault();
+                if (currentOffset > 0) {
+                    currentOffset -= scrollAmount;
+                    carousel.style.transform = `translateX(-${ currentOffset }px)`;
+                  }
+            });
+
+            const showedItemCount = getShowedItemCount();
+
+            nextArrow.on('click', (event) => {
+                event.preventDefault();
+                if(currentOffset < scrollAmount * (productCount - showedItemCount)){
+                    currentOffset += scrollAmount;
+                    carousel.style.transform = `translateX(-${ currentOffset }px)`
+                }            
+            });
         }
     };
 
