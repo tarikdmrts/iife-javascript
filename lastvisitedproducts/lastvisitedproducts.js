@@ -15,6 +15,7 @@
         nextArrow: 'next-arrow-element',
         prevArrow: 'prev-arrow-element',
         contentWrapper:'last-visited-products',
+        sliderArrowInactive:'slider-arrow-inactive',
     };
 
     const selectors = Object.keys(classes).reduce((createdSelector, key) => (
@@ -37,7 +38,7 @@
 
     self.buildCSS = () => {
         const { wrapper, container, image, name, list, content, title, productUrl,
-             productPrice, nextArrow, prevArrow,contentWrapper } = selectors;
+             productPrice, nextArrow, prevArrow,contentWrapper, sliderArrowInactive } = selectors;
 
         const customStyle = `
         ${ wrapper } {
@@ -113,6 +114,11 @@
         ${ contentWrapper }{
             position:relative;
         }
+        ${ sliderArrowInactive }{
+            pointer-events:none;
+            color:gray !important;
+            cursor:default;
+        }
 
         @media screen and (min-width:1650px){
             ${ list } {
@@ -159,7 +165,8 @@
     self.buildHTML = () => {
         const visitedProducts =  JSON.parse(localStorage.getItem('visitedProducts')) || [];
         const productId = $('.product-detail').attr('modelid');
-        const filteredProducts = visitedProducts.filter((product) => product.id !== productId);
+        const filteredProducts = visitedProducts.filter((product) => product.id !== productId)
+            .sort((a,b) => b.timeStamp - a.timeStamp);
 
         if (filteredProducts.length > 0 && self.isOnProductPage()) {
             const productsHTML = filteredProducts.map((product) => `
@@ -205,6 +212,21 @@
             }
             return itemCount;     
         }
+        const setArrowInactive = (prevArrow,nextArrow,currentOffset,maxOffset) =>{
+            if(maxOffset <= 0) {
+                prevArrow.addClass(classes.sliderArrowInactive);
+                nextArrow.addClass(classes.sliderArrowInactive);
+            }else if(currentOffset == 0){
+                prevArrow.addClass(classes.sliderArrowInactive);
+                nextArrow.removeClass(classes.sliderArrowInactive);
+            }else if(currentOffset >= maxOffset){
+                nextArrow.addClass(classes.sliderArrowInactive);
+                prevArrow.removeClass(classes.sliderArrowInactive);
+            }else{
+                prevArrow.removeClass(classes.sliderArrowInactive);
+                nextArrow.removeClass(classes.sliderArrowInactive);
+            }
+        }
         
         if (self.isOnProductPage()) {
             const visitedProducts =  JSON.parse(localStorage.getItem('visitedProducts')) || [];
@@ -217,6 +239,7 @@
                     imgUrl: $('.product-large-image:first').attr('src'),
                     productUrl: window.location.href,
                     productPrice: $('.current-price').text().trim() || $('.price-in-cart').text().trim(),
+                    timeStamp: Date.now(),
                 };
                 visitedProducts.push(newProduct);
                 localStorage.setItem('visitedProducts', JSON.stringify(visitedProducts));
@@ -228,23 +251,27 @@
             const productCount = $(`${ selectors.list } li`).length;
             const scrollAmount = document.querySelector(`${ selectors.content } li`).offsetWidth
             let currentOffset = 0;
-    
+            const showedItemCount = getShowedItemCount();
+            const maxOffset = scrollAmount * (productCount - showedItemCount);
+            
+            setArrowInactive(prevArrow,nextArrow,currentOffset,maxOffset);
+
             prevArrow.on('click', (event) => {
                 event.preventDefault();
                 if (currentOffset > 0) {
                     currentOffset -= scrollAmount;
                     carousel.style.transform = `translateX(-${ currentOffset }px)`;
                   }
+                setArrowInactive(prevArrow, nextArrow, currentOffset, maxOffset);
             });
-
-            const showedItemCount = getShowedItemCount();
 
             nextArrow.on('click', (event) => {
                 event.preventDefault();
-                if(currentOffset < scrollAmount * (productCount - showedItemCount)){
+                if(currentOffset < maxOffset){
                     currentOffset += scrollAmount;
                     carousel.style.transform = `translateX(-${ currentOffset }px)`
-                }            
+                } 
+                setArrowInactive(prevArrow, nextArrow, currentOffset, maxOffset);
             });
         }
     };
