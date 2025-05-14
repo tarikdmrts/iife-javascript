@@ -14,14 +14,14 @@
         productPrice: 'custom-product-price',
         nextArrow: 'next-arrow-element',
         prevArrow: 'prev-arrow-element',
-        contentWrapper:'last-visited-products',
-        sliderArrowInactive:'slider-arrow-inactive',
+        contentWrapper: 'last-visited-products',
+        sliderArrowInactive: 'slider-arrow-inactive',
     };
 
     const selectors = Object.keys(classes).reduce((createdSelector, key) => (
         createdSelector[key] = `.${ classes[key] }`, createdSelector
     ), {
-        appendLocation: `body`,
+        appendLocation: 'body',
     });
 
     self.init = () => {
@@ -33,6 +33,7 @@
 
     self.reset = () => {
         const { style, wrapper } = selectors;
+
         $(`${ style }, ${ wrapper }`).remove();
     };
 
@@ -63,9 +64,8 @@
         ${ list } {
             display: flex;
             list-style: none;
-            padding: 10px 10px 10px 0px;
-            max-width:370px;
             transition: transform 0.3s ease;
+            padding:0;
         }
         ${ name } {
             display: -webkit-box;
@@ -89,67 +89,50 @@
         ${ productUrl }{
             text-decoration:none !important;
         }
-
         ${ productPrice }{
             color: #193db0 !important;
             font-size:16px;
             font-weight:bold;
         }
-
         ${ prevArrow } {
             position:absolute;
-            left:-14px;
+            left:0px;
             top:100px;
             font-size:30px;
             text-decoration:none !important;
         }
         ${ nextArrow } {
             position:absolute;
-            right:-5px;
+            right:0px;
             top:100px;
             font-size:30px;
             text-decoration:none !important;
         }
-
         ${ contentWrapper }{
             position:relative;
+            width:100%;
         }
         ${ sliderArrowInactive }{
-            pointer-events:none;
-            color:gray !important;
-            cursor:default;
+            display:none;
         }
-
         @media screen and (min-width:1650px){
-            ${ list } {
-                max-width:610px;
-            }
             ${ prevArrow } {
-                left:0px;
+                left:-12px;
             }
             ${ nextArrow } {
-                right:5px;
+                right:0px;
             }
             ${ title }{
                 margin-left:20px;
-            }
-        }
-        @media screen and (min-width:769px) and (max-width:999px){
-            ${ list } {
-                max-width:610px;
             }
         }
         @media screen and (max-width:768px){
             ${ image }{
                 width:90px;
             }
-            ${ list } {
-                max-width:300px;
-            }
             ${ container }{
                 max-width:100px;
             }
-
             ${ prevArrow } {
                 left:-20px;
             }
@@ -163,10 +146,10 @@
     };
 
     self.buildHTML = () => {
-        const visitedProducts =  JSON.parse(localStorage.getItem('visitedProducts')) || [];
+        const visitedProducts =  JSON.parse(localStorage.getItem('visitedProducts')) ?? [];
         const productId = $('.product-detail').attr('modelid');
         const filteredProducts = visitedProducts.filter((product) => product.id !== productId)
-            .sort((a,b) => b.timeStamp - a.timeStamp);
+            .sort((a, b) => b.timeStamp - a.timeStamp);
 
         if (filteredProducts.length > 0 && self.isOnProductPage()) {
             const productsHTML = filteredProducts.map((product) => `
@@ -201,35 +184,8 @@
     };
 
     self.setEvents = () => {
-        const getShowedItemCount = () =>{
-            const width = window.innerWidth;
-            let itemCount;
-
-             if (width >= 1440 || width <= 1000) {
-                itemCount = 5;
-            } else {
-                itemCount = 3;
-            }
-            return itemCount;     
-        }
-        const setArrowInactive = (prevArrow,nextArrow,currentOffset,maxOffset) =>{
-            if(maxOffset <= 0) {
-                prevArrow.addClass(classes.sliderArrowInactive);
-                nextArrow.addClass(classes.sliderArrowInactive);
-            }else if(currentOffset == 0){
-                prevArrow.addClass(classes.sliderArrowInactive);
-                nextArrow.removeClass(classes.sliderArrowInactive);
-            }else if(currentOffset >= maxOffset){
-                nextArrow.addClass(classes.sliderArrowInactive);
-                prevArrow.removeClass(classes.sliderArrowInactive);
-            }else{
-                prevArrow.removeClass(classes.sliderArrowInactive);
-                nextArrow.removeClass(classes.sliderArrowInactive);
-            }
-        }
-        
         if (self.isOnProductPage()) {
-            const visitedProducts =  JSON.parse(localStorage.getItem('visitedProducts')) || [];
+            const visitedProducts =  JSON.parse(localStorage.getItem('visitedProducts')) ?? [];
             const productId = $('.product-detail').attr('modelid');
             const isProductExists = visitedProducts.some(product => product.id == productId);
             if (!isProductExists) {
@@ -245,38 +201,62 @@
                 localStorage.setItem('visitedProducts', JSON.stringify(visitedProducts));
             }
 
-            const prevArrow = $( selectors.prevArrow )
-            const nextArrow = $( selectors.nextArrow )
-            const carousel = document.querySelector(`${ selectors.list }`)
-            const productCount = $(`${ selectors.list } li`).length;
-            const scrollAmount = document.querySelector(`${ selectors.content } li`).offsetWidth
+            const prevArrow = $(selectors.prevArrow);
+            const nextArrow = $(selectors.nextArrow);
+            const carousel = $(selectors.list)
             let currentOffset = 0;
-            const showedItemCount = getShowedItemCount();
-            const maxOffset = scrollAmount * (productCount - showedItemCount);
+            const visibleWidth = $(selectors.content).width();
+            const totalListWidth = $(selectors.list)[0].scrollWidth;
+            const maxOffset = totalListWidth - visibleWidth;
             
-            setArrowInactive(prevArrow,nextArrow,currentOffset,maxOffset);
-
+            self.setArrowInactive(prevArrow, nextArrow, currentOffset, maxOffset);
+            
             prevArrow.on('click', (event) => {
                 event.preventDefault();
-                if (currentOffset > 0) {
-                    currentOffset -= scrollAmount;
-                    carousel.style.transform = `translateX(-${ currentOffset }px)`;
-                  }
-                setArrowInactive(prevArrow, nextArrow, currentOffset, maxOffset);
-            });
+                const remaining = currentOffset;
+                const scrollAmount = $(selectors.list + ' li').outerWidth(true);
 
+                if (remaining < scrollAmount * 2) {
+                    currentOffset -= remaining;
+                } else {
+                    currentOffset -= scrollAmount;
+                }
+                carousel.css('transform', `translateX(-${ currentOffset }px)`);             
+                self.setArrowInactive(prevArrow, nextArrow, currentOffset, maxOffset);
+            });
             nextArrow.on('click', (event) => {
                 event.preventDefault();
-                if(currentOffset < maxOffset){
+                const remaining = totalListWidth - (currentOffset + visibleWidth);
+                const scrollAmount = $(selectors.list + ' li').outerWidth(true);
+
+                if (remaining < scrollAmount * 2) {
+                    currentOffset += remaining;
+                } else {
                     currentOffset += scrollAmount;
-                    carousel.style.transform = `translateX(-${ currentOffset }px)`
-                } 
-                setArrowInactive(prevArrow, nextArrow, currentOffset, maxOffset);
+                }
+                carousel.css('transform', `translateX(-${ currentOffset }px)`);
+                self.setArrowInactive(prevArrow, nextArrow, currentOffset,maxOffset);
             });
         }
     };
 
     self.isOnProductPage = () => $('.product-detail').length > 0;
+    
+    self.setArrowInactive = (prevArrow,nextArrow,currentOffset,maxOffset) =>{
+        if(maxOffset <= 0) {
+            prevArrow.addClass(classes.sliderArrowInactive);
+            nextArrow.addClass(classes.sliderArrowInactive);
+        }else if(currentOffset == 0){
+            prevArrow.addClass(classes.sliderArrowInactive);
+            nextArrow.removeClass(classes.sliderArrowInactive);
+        }else if(currentOffset >= maxOffset){
+            nextArrow.addClass(classes.sliderArrowInactive);
+            prevArrow.removeClass(classes.sliderArrowInactive);
+        }else{
+            prevArrow.removeClass(classes.sliderArrowInactive);
+            nextArrow.removeClass(classes.sliderArrowInactive);
+        }
+    }
 
     self.init();
 })({});
